@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from .database import Base
+from app.database import Base
 
 class User(Base):
     __tablename__ = "users"
@@ -10,8 +10,8 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     
-    # cascade
     favorites = relationship("Favorite", back_populates="user", cascade="all, delete-orphan")
+
 
 class City(Base):
     __tablename__ = "cities"
@@ -25,18 +25,20 @@ class City(Base):
     weather_records = relationship("WeatherRecord", back_populates="city", cascade="all, delete-orphan")
     favorites = relationship("Favorite", back_populates="city", cascade="all, delete-orphan")
 
+
 class WeatherRecord(Base):
     __tablename__ = "weather_records"
     
     id = Column(Integer, primary_key=True, index=True)
-    city_id = Column(Integer, ForeignKey("cities.id"), nullable=False, index=True) 
+    city_id = Column(Integer, ForeignKey("cities.id"), nullable=False, index=True)
     temperature = Column(Float)
     humidity = Column(Float)
-    wind_speed = Column(Float)          
-    condition_code = Column(Integer)  
+    wind_speed = Column(Float)
+    condition_code = Column(Integer)
     recorded_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     
     city = relationship("City", back_populates="weather_records")
+
 
 class Favorite(Base):
     __tablename__ = "favorites"
@@ -48,6 +50,7 @@ class Favorite(Base):
     
     user = relationship("User", back_populates="favorites")
     city = relationship("City", back_populates="favorites")
+
 
 class APILog(Base):
     __tablename__ = "api_logs"
