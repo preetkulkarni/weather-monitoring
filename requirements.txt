@@ -1,3 +1,7 @@
 fastapi
 uvicorn
-sqlite3
+sqlalchemy
+requests
+apscheduler
+pytest
+httpx
