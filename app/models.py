@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String, Float, DateTime
 from app.database import Base
-
+from datetime import datetime
 
 # 👤 Users table (basic placeholder)
 class User(Base):
@@ -16,7 +16,7 @@ class Weather(Base):
     id = Column(Integer, primary_key=True, index=True)
     city = Column(String)
     temperature = Column(Float)
-
+    timestamp = Column(DateTime, default=datetime.utcnow)
 
 # ⭐ Favorites table (YOUR FEATURE)
 class Favorite(Base):
