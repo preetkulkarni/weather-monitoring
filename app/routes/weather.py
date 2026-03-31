@@ -4,6 +4,10 @@ from app.database import SessionLocal
 from app.models import WeatherRecord, City
 from app.services.weather_fetcher import fetch_weather_data
 
+from datetime import date
+from sqlalchemy import func
+
+
 router = APIRouter()
 
 
@@ -51,5 +55,49 @@ def get_weather_by_date(city: str, date: str):
     except ValueError:
         return {"error": "Invalid date format. Use YYYY-MM-DD"}
 
+    finally:
+        db.close()
+
+
+@router.get("/weather/history/{city}")
+def get_weather_history(city: str):
+    db = SessionLocal()
+    try:
+        city_obj = db.query(City).filter(City.name == city).first()
+        if not city_obj:
+            return {"error": "City not found"}
+
+        records = db.query(WeatherRecord)\
+            .filter(WeatherRecord.city_id == city_obj.id)\
+            .order_by(WeatherRecord.recorded_at.desc())\
+            .all()
+
+        return records
+    finally:
+        db.close()
+
+
+@router.get("/weather/compare")
+def compare_weather(city: str, date1: date, date2: date):
+    db = SessionLocal()
+    try:
+        city_obj = db.query(City).filter(City.name == city).first()
+        if not city_obj:
+            return {"error": "City not found"}
+
+        rec1 = db.query(WeatherRecord).filter(
+            WeatherRecord.city_id == city_obj.id,
+            func.date(WeatherRecord.recorded_at) == date1
+        ).first()
+
+        rec2 = db.query(WeatherRecord).filter(
+            WeatherRecord.city_id == city_obj.id,
+            func.date(WeatherRecord.recorded_at) == date2
+        ).first()
+
+        if not rec1 or not rec2:
+            return {"error": "Weather data not found for given dates"}
+
+        return {"date1": rec1, "date2": rec2}
     finally:
         db.close()
