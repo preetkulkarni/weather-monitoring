@@ -1,26 +1,28 @@
 from fastapi import FastAPI
+
 from app.database import engine, Base
-from app.routes import weather, favourites
+from app.routes import weather, favourites, auth
 from app.services.weather_fetcher import start_scheduler
 
-# Create tables
+
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+app = FastAPI(
+    title="Weather Monitoring API",
+    description="Backend system that fetches weather data, stores history, and tracks favorites."
+)
 
 
-# Include routes
 app.include_router(weather.router)
 app.include_router(favourites.router)
+app.include_router(auth.router)
 
 
-# Root API
 @app.get("/")
-def home():
+def root_endpoint():
     return {"message": "Weather Monitoring Backend Running"}
 
 
-# Start scheduler when app starts
 @app.on_event("startup")
 def startup_event():
     start_scheduler()
