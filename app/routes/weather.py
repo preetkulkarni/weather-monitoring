@@ -23,7 +23,11 @@ def fetch_weather(city: str, current_user: dict = Depends(get_current_user)):
 
 
 @router.get("/weather/date/{city}")
-def get_weather_by_date(city: str, date: str):
+def get_weather_by_date(
+    city: str,
+    date: str,
+    current_user: dict = Depends(get_current_user)
+):
     db = SessionLocal()
 
     try:
@@ -64,7 +68,10 @@ def get_weather_by_date(city: str, date: str):
 
 
 @router.get("/weather/history/{city}")
-def get_weather_history(city: str):
+def get_weather_history(
+    city: str,
+    current_user: dict = Depends(get_current_user)
+):
     db = SessionLocal()
     try:
         city_obj = db.query(City).filter(City.name == city).first()
@@ -82,7 +89,12 @@ def get_weather_history(city: str):
 
 
 @router.get("/weather/compare")
-def compare_weather(city: str, date1: date, date2: date):
+def compare_weather(
+    city: str,
+    date1: date,
+    date2: date,
+    current_user: dict = Depends(get_current_user)
+):
     db = SessionLocal()
     try:
         city_obj = db.query(City).filter(City.name == city).first()
