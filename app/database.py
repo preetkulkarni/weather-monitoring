@@ -9,7 +9,9 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 load_dotenv()
 
 
-SQLALCHEMY_DATABASE_URL = os.getenv("SQLALCHEMY_DATABASE_URL", "sqlite:///./weather.db")
+SQLALCHEMY_DATABASE_URL = os.getenv("SQLALCHEMY_DATABASE_URL")
+if not SQLALCHEMY_DATABASE_URL:
+    raise ValueError("CRITICAL: Database path not found.")
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
