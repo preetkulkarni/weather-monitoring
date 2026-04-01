@@ -1,6 +1,7 @@
 import requests
 import time
 import logging
+from datetime import datetime  
 from requests.exceptions import RequestException, Timeout
 from sqlalchemy.exc import SQLAlchemyError
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -76,7 +77,8 @@ def fetch_weather_data(city: str):
                 temperature=temperature,
                 humidity=humidity,
                 wind_speed=wind_speed,
-                condition_code=condition_code
+                condition_code=condition_code,
+                recorded_at=datetime.utcnow()   # 🔥 IMPORTANT FIX
             )
             db.add(weather)
             db.commit()
@@ -95,7 +97,6 @@ def fetch_weather_data(city: str):
             raise WeatherFetchError(f"API request failed: {str(e)}")
 
         finally:
-            
             try:
                 response_time = (time.perf_counter() - start_time) * 1000
 
@@ -112,11 +113,10 @@ def fetch_weather_data(city: str):
 
     except Exception as e:
         logger.error(str(e))
-        return {"error": "Failed to fetch weather"}
+        return {"error": str(e)}   # ✅ UPDATED (better error output)
 
     finally:
         db.close()
-
 
 
 def start_scheduler():
@@ -141,4 +141,7 @@ def start_scheduler():
             print(f"Updated {success_count}/{len(cities)} cities")
 
     scheduler.add_job(auto_fetch, 'interval', minutes=1)
+
+
+
     scheduler.start()
