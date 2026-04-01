@@ -10,7 +10,7 @@ from passlib.context import CryptContext
 from dotenv import load_dotenv
 from jose import JWTError, jwt
 
-from ..database import get_db
+from ..database import get_db   
 from ..models import User
 from ..schemas import UserCreate, UserResponse, Token
 
@@ -42,7 +42,8 @@ def get_current_user(res: HTTPAuthorizationCredentials = Depends(security), db: 
     token = res.credentials 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
+        # user_id: str = payload.get("sub")
+        user_id = int(payload.get("sub")) 
         user = db.query(User).filter(User.id == user_id).first()
         if user is None:
             raise HTTPException(status_code=401, detail="Invalid token payload")
