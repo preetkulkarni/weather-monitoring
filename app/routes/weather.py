@@ -1,8 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime
 from app.database import SessionLocal
 from app.models import WeatherRecord, City
 from app.services.weather_fetcher import fetch_weather_data
+from .auth import get_current_user
 
 from datetime import date
 from sqlalchemy import func
@@ -11,9 +12,12 @@ from sqlalchemy import func
 router = APIRouter()
 
 
-
+# fixed auth
 @router.get("/weather/fetch/{city}")
-def fetch_weather(city: str):
+def fetch_weather(city: str, current_user: dict = Depends(get_current_user)):
+    user_id = current_user.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
     return fetch_weather_data(city)
 
 
