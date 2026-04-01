@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import Favorite
 
+from .auth import get_current_user
+
 router = APIRouter()
 
 # DB connection
@@ -14,10 +16,17 @@ def get_db():
         db.close()
 
 
+
 # ⭐ Add Favorite
 @router.post("/favorites/{user_id}/{city_id}")
-def add_favorite(user_id: int, city_id: int, db: Session = Depends(get_db)):
-
+def add_favorite(
+    user_id: int,
+    city_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Not allowed")
     existing = db.query(Favorite).filter(
         Favorite.user_id == user_id,
         Favorite.city_id == city_id
@@ -35,13 +44,24 @@ def add_favorite(user_id: int, city_id: int, db: Session = Depends(get_db)):
 
 # ⭐ Get Favorites
 @router.get("/favorites/{user_id}")
-def get_favorites(user_id: int, db: Session = Depends(get_db)):
+def get_favorites(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Not allowed")
     return db.query(Favorite).filter(Favorite.user_id == user_id).all()
 
 
 # ⭐ Remove Favorite
 @router.delete("/favorites/{user_id}/{city_id}")
-def remove_favorite(user_id: int, city_id: int, db: Session = Depends(get_db)):
+def remove_favorite(
+    user_id: int,
+    city_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
 
     fav = db.query(Favorite).filter(
         Favorite.user_id == user_id,
