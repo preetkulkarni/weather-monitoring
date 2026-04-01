@@ -43,7 +43,8 @@ def get_current_user(res: HTTPAuthorizationCredentials = Depends(security), db: 
     token = res.credentials 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
+        subject: str = payload.get("sub")
+        user_id = int(subject)
         user = db.query(User).filter(User.id == user_id).first()
         if user is None:
             raise HTTPException(status_code=401, detail="Invalid token payload")
