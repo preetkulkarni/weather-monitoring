@@ -1,7 +1,8 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Session
 from sqlalchemy.sql import func
 from app.database import Base
+import time
 
 class User(Base):
     __tablename__ = "users"
@@ -60,3 +61,16 @@ class APILog(Base):
     status_code = Column(Integer, nullable=False)
     response_time_ms = Column(Float, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+def log_api_call(db: Session, endpoint: str, status_code: int, start_time: float):
+    """
+    Helper to persist API logs to the database.
+    """
+    duration = (time.perf_counter() - start_time) * 1000  # Convert to ms
+    api_log = APILog(
+        endpoint=endpoint,
+        status_code=status_code,
+        response_time_ms=duration
+    )
+    db.add(api_log)
+    db.commit()
