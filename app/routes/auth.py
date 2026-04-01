@@ -1,5 +1,6 @@
 import os
 import logging
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -10,8 +11,8 @@ from passlib.context import CryptContext
 from dotenv import load_dotenv
 from jose import JWTError, jwt
 
-from ..database import get_db   
-from ..models import User
+from ..database import get_db
+from ..models import User, log_api_call
 from ..schemas import UserCreate, UserResponse, Token
 
 logger = logging.getLogger(__name__)
@@ -92,8 +93,11 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)) -> Any:
     """
     Registers a new user in the system.
     """
+    start_time = time.perf_counter()
+    endpoint = "/register"
     existing_user = db.query(User).filter(User.email == user.email).first()
     if existing_user:
+        log_api_call(db, endpoint, 409, start_time)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Email is already registered."
@@ -106,11 +110,13 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)) -> Any:
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
+        log_api_call(db, endpoint, 201, start_time)
 
         return new_user
 
     except Exception as e:
         db.rollback()
+        log_api_call(db, endpoint, 500, start_time)
         logger.error(f"Database error during user registration: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
@@ -123,9 +129,12 @@ def login_user(user: UserCreate, db: Session = Depends(get_db)) -> Any:
     """
     Authenticates user and returns a token.
     """
+    start_time = time.perf_counter()
+    endpoint = "/login"
     db_user = db.query(User).filter(User.email == user.email).first()
 
     if not db_user or not verify_password(user.password, db_user.hashed_password):
+        log_api_call(db, endpoint, 401, start_time)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
@@ -134,6 +143,7 @@ def login_user(user: UserCreate, db: Session = Depends(get_db)) -> Any:
 
     access_token = create_access_token({"sub": str(db_user.id)})
 
+    log_api_call(db, endpoint, 200, start_time)
     return {
         "access_token": access_token,
         "token_type": "bearer"
