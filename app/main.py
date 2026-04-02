@@ -23,6 +23,12 @@ def root_endpoint():
     return {"message": "Weather Monitoring Backend Running"}
 
 
+# ✅ FIXED: prevent multiple scheduler instances
+scheduler_started = False
+
 @app.on_event("startup")
 def startup_event():
-    start_scheduler()
+    global scheduler_started
+    if not scheduler_started:
+        start_scheduler()
+        scheduler_started = True

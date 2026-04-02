@@ -11,6 +11,7 @@ from passlib.context import CryptContext
 from dotenv import load_dotenv
 from jose import JWTError, jwt
 
+from ..database import get_db
 from ..database import get_db   
 from ..models import User, log_api_call
 from ..schemas import UserCreate, UserResponse, Token

@@ -1,24 +1,27 @@
 from fastapi import APIRouter, Depends, HTTPException
-from datetime import datetime
+from datetime import datetime, date
+from sqlalchemy import func
 from app.database import SessionLocal
 from app.models import WeatherRecord, City
 from app.services.weather_fetcher import fetch_weather_data
 from .auth import get_current_user
 
-from datetime import date
-from sqlalchemy import func
-
-
 router = APIRouter()
 
 
-# fixed auth
 @router.get("/weather/fetch/{city}")
 def fetch_weather(city: str, current_user: dict = Depends(get_current_user)):
-    user_id = current_user.get("user_id")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    return fetch_weather_data(city)
+    try:
+        user_id = current_user.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        return fetch_weather_data(city)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 
@@ -29,24 +32,23 @@ def get_weather_by_date(
     current_user: dict = Depends(get_current_user)
 ):
     db = SessionLocal()
-
     try:
-        
         target_date = datetime.strptime(date, "%Y-%m-%d").date()
 
-       
         city_obj = db.query(City).filter(City.name == city).first()
-
         if not city_obj:
-            return {"error": "City not found"}
+            raise HTTPException(status_code=404, detail="City not found")
 
-       
+        # 🔥 DB-level filtering (IMPORTANT improvement)
         results = db.query(WeatherRecord).filter(
-            WeatherRecord.city_id == city_obj.id
+            WeatherRecord.city_id == city_obj.id,
+            func.date(WeatherRecord.recorded_at) == target_date
         ).all()
 
-        
-        filtered = [
+        if not results:
+            return {"message": "No data found for this date"}
+
+        return [
             {
                 "city": city,
                 "temperature": w.temperature,
@@ -55,16 +57,19 @@ def get_weather_by_date(
                 "recorded_at": w.recorded_at
             }
             for w in results
-            if w.recorded_at.date() == target_date
         ]
 
-        return filtered
-
     except ValueError:
-        return {"error": "Invalid date format. Use YYYY-MM-DD"}
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
     finally:
         db.close()
+
 
 
 @router.get("/weather/history/{city}")
@@ -76,7 +81,7 @@ def get_weather_history(
     try:
         city_obj = db.query(City).filter(City.name == city).first()
         if not city_obj:
-            return {"error": "City not found"}
+            raise HTTPException(status_code=404, detail="City not found")
 
         records = db.query(WeatherRecord)\
             .filter(WeatherRecord.city_id == city_obj.id)\
@@ -84,8 +89,15 @@ def get_weather_history(
             .all()
 
         return records
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
     finally:
         db.close()
+
 
 
 @router.get("/weather/compare")
@@ -99,7 +111,7 @@ def compare_weather(
     try:
         city_obj = db.query(City).filter(City.name == city).first()
         if not city_obj:
-            return {"error": "City not found"}
+            raise HTTPException(status_code=404, detail="City not found")
 
         rec1 = db.query(WeatherRecord).filter(
             WeatherRecord.city_id == city_obj.id,
@@ -112,8 +124,28 @@ def compare_weather(
         ).first()
 
         if not rec1 or not rec2:
-            return {"error": "Weather data not found for given dates"}
+            raise HTTPException(status_code=404, detail="Weather data not found for given dates")
 
-        return {"date1": rec1, "date2": rec2}
+        
+        return {
+            "date1": {
+                "temperature": rec1.temperature,
+                "humidity": rec1.humidity,
+                "wind_speed": rec1.wind_speed,
+                "recorded_at": rec1.recorded_at
+            },
+            "date2": {
+                "temperature": rec2.temperature,
+                "humidity": rec2.humidity,
+                "wind_speed": rec2.wind_speed,
+                "recorded_at": rec2.recorded_at
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
     finally:
         db.close()
